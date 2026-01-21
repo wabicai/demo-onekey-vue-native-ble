@@ -34,7 +34,10 @@ After adding Android platform, edit `android/app/src/main/AndroidManifest.xml` t
 <uses-feature android:name="android.hardware.bluetooth_le" android:required="true" />
 ```
 
-See [android-setup.md](./android-setup.md) for complete configuration.
+### Run on Device
+
+1. Connect Android device via USB (enable Developer Mode & USB Debugging)
+2. In Android Studio, select your device and click Run
 
 ## Architecture
 
@@ -100,16 +103,16 @@ if (buffer.length - 6 >= bufferLength) {
 vue-ble-demo/
 ├── src/
 │   ├── lib/
-│   │   ├── OneKeyCapacitorBluetooth.ts  # BLE adapter
-│   │   └── debug-protocol.ts            # Protocol debugger
+│   │   └── OneKeyCapacitorBluetooth.ts  # BLE adapter
 │   ├── composables/
 │   │   └── useOneKeyDevice.ts           # OneKey Vue composable
 │   ├── App.vue                          # Test UI
 │   └── main.ts
-├── package.json
+├── docs/
+│   └── onekey-ble-integration-guide.md  # BLE integration details
+├── android/                             # Capacitor Android project
 ├── capacitor.config.ts
-├── vite.config.ts
-└── android-setup.md
+└── vite.config.ts
 ```
 
 ## Debugging
