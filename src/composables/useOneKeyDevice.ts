@@ -1,5 +1,6 @@
 import { ref, reactive } from 'vue'
 import { Capacitor } from '@capacitor/core'
+import { Buffer } from 'buffer'
 import OneKeySDK from '@onekeyfe/hd-common-connect-sdk'
 import {
   UI_EVENT,
@@ -405,6 +406,124 @@ async function getCardanoPublicKey(): Promise<any> {
   }
 }
 
+// Cardano Sign Message - Test for mainnet vs testnet
+// networkId: 1 = mainnet, 0 = testnet
+async function cardanoSignMessage(networkId: number = 1): Promise<any> {
+  const { connectId, deviceId } = getDeviceInfo()
+  const networkName = networkId === 1 ? 'Mainnet' : 'Testnet'
+  addLog(`Testing Cardano signMessage on ${networkName} (networkId=${networkId})...`)
+  isLoading.value = true
+
+  try {
+    // Log device ID info for debugging the deviceId vs connectId vs features.device_id issue
+    addLog(`--- Device ID Info ---`)
+    addLog(`connectId (from search): ${connectId}`)
+    addLog(`deviceId (from search): ${deviceId}`)
+    addLog(`features.device_id: ${deviceFeatures.value?.device_id || 'N/A'}`)
+    addLog(`----------------------`)
+
+    // derivationType: 1 for Classic, 2 for Touch/Pro
+    const isTouch = deviceFeatures.value?.model?.toLowerCase()?.includes('touch') ||
+                    deviceFeatures.value?.model?.toLowerCase()?.includes('pro')
+    const derivationType = isTouch ? 2 : 1
+
+    // Test message
+    const message = 'Hello OneKey'
+    const messageHex = Buffer.from(message).toString('hex')
+
+    addLog(`Message: "${message}"`)
+    addLog(`Message Hex: ${messageHex}`)
+    addLog(`derivationType: ${derivationType}`)
+
+    const response = await OneKeySDK.cardanoSignMessage(connectId, deviceId, {
+      path: "m/1852'/1815'/0'/0/0",
+      message: messageHex,
+      networkId,
+      derivationType
+    })
+
+    if (!response?.success) {
+      const payload = response?.payload as any
+      const errorMsg = payload?.error || payload?.message || 'cardanoSignMessage failed'
+      const errorCode = payload?.code || 'unknown'
+      addLog(`ERROR: ${errorMsg} (code: ${errorCode})`)
+      throw new Error(`${errorMsg} (code: ${errorCode})`)
+    }
+
+    addLog(`✅ Cardano signMessage SUCCESS on ${networkName}!`)
+    addLog(`Signature: ${response.payload.signature?.substring(0, 40)}...`)
+    result.value = JSON.stringify({
+      network: networkName,
+      networkId,
+      ...response.payload
+    }, null, 2)
+    return response.payload
+  } catch (e: any) {
+    const errorMsg = e.message || String(e)
+    addLog(`❌ cardanoSignMessage FAILED on ${networkName}: ${errorMsg}`)
+    result.value = JSON.stringify({
+      network: networkName,
+      networkId,
+      error: errorMsg,
+      timestamp: new Date().toISOString()
+    }, null, 2)
+    throw e
+  } finally {
+    isLoading.value = false
+  }
+}
+
+// Test Cardano signMessage on Mainnet
+async function cardanoSignMessageMainnet(): Promise<any> {
+  return cardanoSignMessage(1)
+}
+
+// Test Cardano signMessage on Testnet
+async function cardanoSignMessageTestnet(): Promise<any> {
+  return cardanoSignMessage(0)
+}
+
+// Get Cardano Address
+async function getCardanoAddress(): Promise<any> {
+  const { connectId, deviceId } = getDeviceInfo()
+  addLog('Getting Cardano address...')
+  isLoading.value = true
+
+  try {
+    const isTouch = deviceFeatures.value?.model?.toLowerCase()?.includes('touch') ||
+                    deviceFeatures.value?.model?.toLowerCase()?.includes('pro')
+    const derivationType = isTouch ? 2 : 1
+
+    addLog(`Using derivationType: ${derivationType} (${isTouch ? 'Touch/Pro' : 'Classic'})`)
+
+    const response = await OneKeySDK.cardanoGetAddress(connectId, deviceId, {
+      addressParameters: {
+        addressType: 0, // Base address
+        path: "m/1852'/1815'/0'/0/0",
+        stakingPath: "m/1852'/1815'/0'/2/0"
+      },
+      networkId: 1, // Mainnet
+      protocolMagic: 764824073, // Mainnet magic
+      derivationType,
+      showOnOneKey: false
+    })
+
+    if (!response?.success) {
+      throw new Error(response?.payload?.error || 'cardanoGetAddress failed')
+    }
+
+    addLog(`Cardano Address: ${response.payload.address}`)
+    result.value = JSON.stringify(response.payload, null, 2)
+    return response.payload
+  } catch (e: any) {
+    addLog(`getCardanoAddress failed: ${e.message || e}`)
+    result.value = `Error: ${e.message || e}`
+    throw e
+  } finally {
+    isLoading.value = false
+  }
+}
+
 // Check Firmware Release
 async function checkFirmwareRelease(): Promise<any> {
   const { connectId } = getDeviceInfo()
@@ -487,6 +606,9 @@ export function useOneKeyDevice() {
     getBtcAddress,
     getEvmAddress,
     getCardanoPublicKey,
+    getCardanoAddress,
+    cardanoSignMessageMainnet,
+    cardanoSignMessageTestnet,
     checkFirmwareRelease,
     checkBleFirmwareRelease,
     clearLogs,

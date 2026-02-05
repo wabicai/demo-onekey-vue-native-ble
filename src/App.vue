@@ -24,6 +24,9 @@ const {
   getBtcAddress,
   getEvmAddress,
   getCardanoPublicKey,
+  getCardanoAddress,
+  cardanoSignMessageMainnet,
+  cardanoSignMessageTestnet,
   checkFirmwareRelease,
   checkBleFirmwareRelease,
   clearLogs,
@@ -150,6 +153,20 @@ async function handleConnect(device: any) {
       </button>
       <button @click="handleAction(getCardanoPublicKey)" :disabled="isLoading">
         Get Cardano Public Key
+      </button>
+      <button @click="handleAction(getCardanoAddress)" :disabled="isLoading">
+        Get Cardano Address
+      </button>
+    </section>
+
+    <section v-if="connectedDevice" class="actions">
+      <h2>Cardano signMessage Test (Verify Testnet Issue)</h2>
+      <p class="section-hint">Testing if signData works on testnet - Developer reported "invalid network id" error on testnet</p>
+      <button @click="handleAction(cardanoSignMessageMainnet)" :disabled="isLoading" class="success">
+        Sign Message (Mainnet, networkId=1)
+      </button>
+      <button @click="handleAction(cardanoSignMessageTestnet)" :disabled="isLoading" class="warning">
+        Sign Message (Testnet, networkId=0)
       </button>
     </section>
 
@@ -354,6 +371,14 @@ button.primary {
   background: linear-gradient(135deg, #00d4aa 0%, #00a896 100%);
 }
 
+button.success {
+  background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+}
+
+button.warning {
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+}
+
 button:hover:not(:disabled) {
   transform: translateY(-1px);
   opacity: 0.9;
@@ -443,6 +468,13 @@ button:disabled {
 
 .value {
   font-family: monospace;
+}
+
+.section-hint {
+  font-size: 12px;
+  color: #888;
+  margin: -8px 0 12px 0;
+  line-height: 1.4;
 }
 
 .result {
